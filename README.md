@@ -7,6 +7,6 @@ only.
 
 
 ## Features
-- Purely C11 atomics.
-- Lock-free up to the C11 implementation of stdatomic
+- Purely [C11 atomics](http://en.cppreference.com/w/c/atomic).
+- Lock-free up to the C11 implementation of `stdatomic`
 - No dynamic memory use - `malloc`.
