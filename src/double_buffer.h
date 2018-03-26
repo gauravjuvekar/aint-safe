@@ -128,7 +128,7 @@ void DoubleBuffer_write_commit(DoubleBuffer *db, void *slot);
  * \pre \p db must be initialized with #DOUBLE_BUFFER_STATIC_INIT
  * \post #DoubleBuffer_read_release() must be called after using the slot
  */
-void *DoubleBuffer_read_acquire(DoubleBuffer *db);
+const void *DoubleBuffer_read_acquire(DoubleBuffer *db);
 
 
 /** \brief Release a slot previously acquired for reading

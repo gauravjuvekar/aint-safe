@@ -42,7 +42,7 @@ void DoubleBuffer_write_commit(DoubleBuffer *db, void *slot) {
 }
 
 
-void *DoubleBuffer_read_acquire(DoubleBuffer *db) {
+const void *DoubleBuffer_read_acquire(DoubleBuffer *db) {
     if (0 == atomic_fetch_add(&db->n_readers, 1)) {
         /* We are the first reader */
         /* We check if there is a new slot with updated data, and set it as the
