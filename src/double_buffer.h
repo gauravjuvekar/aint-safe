@@ -5,7 +5,43 @@
  *
  * Usage:
  * \code{.c}
+ * typedef struct {...} MyStruct;
+ *
+ * // Must be initialized to some sane value as this can be returned to a
+ * // reader initially.
+ * static MyStruct array[2];
+ *
+ * DoubleBuffer global_latest_value = DOUBLE_BUFFER_STATIC_INIT(
+ *         sizeof(MyStruct), array);
+ *
+ * void handler_writer(void) {
+ *     // some interrupt, eg systick, or value from some sensor
+ *     MyStruct *latest = DoubleBuffer_write_acquire(&global_latest_value);
+ *     if (latest != NULL) {
+ *         // write value into *latest
+ *     }
+ *     DoubleBuffer_write_commit(&global_latest_value, latest);
+ * }
+ *
+ * void handler2(void) {
+ *     // periodically check the latest value
+ *     MyStruct *latest = DoubleBuffer_read_acquire(&global_latest_value);
+ *     ... // Do something with *latest
+ *     DoubleBuffer_read_release(&global_latest_value, latest);
+ * }
+ *
+ * void handler_n(void) {
+ *     // Can be just like handler2
+ *     handler2();
+ * }
+ *
+ * // handler_writer, handler2, ... handler_n can have any priorities. Any of
+ * // them can interrupt any other handler.
  * \endcode
+ *
+ * \note acquire() and commit()/release() must happen in a nested order. The
+ * best way to ensure this is that each function calls acqurire() only once and
+ * calls the corresponding commit()/release() before it returns.
  */
 /* Copyright 2018 Gaurav Juvekar */
 
@@ -18,8 +54,7 @@
 _Static_assert(
         ATOMIC_POINTER_LOCK_FREE,
         "Your stdlib implementation does not have lock-free pointer atomics");
-_Static_assert(
-        ATOMIC_INT_LOCK_FREE,
+_Static_assert( ATOMIC_INT_LOCK_FREE,
         "Your stdlib implementation does not have lock-free atomic int");
 #endif
 
@@ -89,7 +124,6 @@ void DoubleBuffer_write_commit(DoubleBuffer *db, void *slot);
  * \param db #DoubleBuffer to acquire the slot from
  *
  * \return Pointer to an available slot in \p db->data for reading
- * \retval NULL if no slot is available in \p db->data for reading
  *
  * \pre \p db must be initialized with #DOUBLE_BUFFER_STATIC_INIT
  * \post #DoubleBuffer_read_release() must be called after using the slot
