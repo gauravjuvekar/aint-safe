@@ -7,9 +7,9 @@
 #include "nested_queue.h"
 
 
-static inline void *NestedQueue_acquire(NestedQueue *  q,
-                                        void *_Atomic *acquire,
-                                        void *_Atomic *limit) {
+static void *NestedQueue_acquire(NestedQueue *  q,
+                                 void *_Atomic *acquire,
+                                 void *_Atomic *limit) {
     void *src = atomic_load(acquire);
     void *dst;
     do {
@@ -26,9 +26,9 @@ static inline void *NestedQueue_acquire(NestedQueue *  q,
 }
 
 
-static inline void NestedQueue_commit(void *_Atomic *commit,
-                                      void *_Atomic *acquire,
-                                      const void *   slot) {
+static void NestedQueue_commit(void *_Atomic *commit,
+                               void *_Atomic *acquire,
+                               const void *   slot) {
     if (slot != atomic_load(commit)) {
         return;
     } else {
