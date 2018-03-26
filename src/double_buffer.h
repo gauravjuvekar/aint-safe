@@ -26,14 +26,14 @@ _Static_assert(
 
 /** \brief Internal data structure of the nested MPMC double buffer
  *
- * This must be initialized with #DOUBLE_BUFFER_STATIC_INIT at declaration
+ * This must be initialized with #DOUBLE_BUFFER_STATIC_INIT at declaration.
  */
 typedef struct DoubleBuffer {
-    /** Pointer to current slot in data being read */
+    /** Pointer to current slot in #data being read */
     void *_Atomic selected_read;
-    /** Pointer to next slot in data that can be read from */
+    /** Pointer to next slot in #data that can be read from */
     void *_Atomic next_read;
-    /** Data to allocate slots from */
+    /** Data array (of length 2) forming the double buffer */
     void *const data;
     /** Size of a slot in #data */
     const size_t elem_size;
@@ -46,10 +46,8 @@ typedef struct DoubleBuffer {
 
 /** \brief Statically initialize a #DoubleBuffer
  *
- * Use this macro to initialize a #DoubleBuffer at declaration.
- *
- * \param p_elem_size  size of one element of \p data
- * \param p_data_array data array (of length 2) to allocate from
+ * \param p_elem_size  size of one element of \p p_data_array
+ * \param p_data_array data array (of length 2) to use as the double buffer
  *
  * \return A #DoubleBuffer static initializer
  */
@@ -65,7 +63,7 @@ typedef struct DoubleBuffer {
  *
  * \param db #DoubleBuffer to acquire the slot from
  *
- * \return Pointer to an available slot in \p db
+ * \return Pointer to an available slot in \p db->data
  * \retval NULL if another writer has acquired the slot first
  *
  * \pre \p db must be initialized with #DOUBLE_BUFFER_STATIC_INIT
@@ -75,9 +73,9 @@ typedef struct DoubleBuffer {
 void *DoubleBuffer_write_acquire(DoubleBuffer *db);
 
 
-/** \brief Commit a slot acquired for writing
+/** \brief Commit a slot previously acquired for writing
  *
- * \param db   #DoubleBuffer to from which \p slot was acquired
+ * \param db   #DoubleBuffer from which \p slot was acquired
  * \param slot slot acquired by #DoubleBuffer_write_acquire() or NULL
  *
  * \pre #DoubleBuffer_write_commit() must be called for any intermediate slots
@@ -86,12 +84,12 @@ void *DoubleBuffer_write_acquire(DoubleBuffer *db);
 void DoubleBuffer_write_commit(DoubleBuffer *db, void *slot);
 
 
-/** \brief Acquire a slot from the double buffer for reading
+/** \brief Acquire a slot for reading
  *
  * \param db #DoubleBuffer to acquire the slot from
  *
- * \return Pointer to an available slot in \p db for reading
- * \retval NULL if no slot is available in \p db for reading
+ * \return Pointer to an available slot in \p db->data for reading
+ * \retval NULL if no slot is available in \p db->data for reading
  *
  * \pre \p db must be initialized with #DOUBLE_BUFFER_STATIC_INIT
  * \post #DoubleBuffer_read_release() must be called after using the slot
@@ -99,10 +97,10 @@ void DoubleBuffer_write_commit(DoubleBuffer *db, void *slot);
 void *DoubleBuffer_read_acquire(DoubleBuffer *db);
 
 
-/** \brief Release a slot acquired for reading
+/** \brief Release a slot previously acquired for reading
  *
- * \param db   #DoubleBuffer to from which \p slot was acquired
- * \param slot slot acquired by #DoubleBuffer_read_acquire()
+ * \param db   #DoubleBuffer from which \p slot was acquired
+ * \param slot slot acquired by #DoubleBuffer_read_acquire() or NULL
  *
  * \pre #DoubleBuffer_read_release() must be called for any intermediate slots
  * acquired after the corresponding #DoubleBuffer_read_acquire() call
