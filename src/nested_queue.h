@@ -51,7 +51,7 @@ typedef struct NestedQueue {
  * \param p_n_elems      number of elements in \p data
  * \param p_data_array   data array to allocate from
  *
- * \return A #NestedQueue instance with \c const members initialized
+ * \return A #NestedQueue static initialiizer
  */
 #define NESTED_QUEUE_STATIC_INIT(p_elem_size, p_n_elems, p_data_array)        \
     {                                                                         \
@@ -65,8 +65,8 @@ typedef struct NestedQueue {
  *
  * \param q #NestedQueue to acquire the slot from
  *
- * \return Pointer to an available slot in \p q
- * \retval NULL if no slot is available in \p q
+ * \return Pointer to an available slot in \p q->data
+ * \retval NULL if no slot is available in \p q->data
  *
  * \pre \p q must be initialized with #NESTED_QUEUE_STATIC_INIT
  * \post #NestedQueue_write_commit() must be called after writing to the
@@ -90,8 +90,8 @@ void NestedQueue_write_commit(NestedQueue *q, const void *slot);
  *
  * \param q #NestedQueue to acquire the slot from
  *
- * \return Pointer to an available slot in \p q for reading
- * \retval NULL if no slot is available in \p q for reading
+ * \return Pointer to an available slot in \p q->data for reading
+ * \retval NULL if no slot is available in \p q->data for reading
  *
  * \pre \p q must be initialized with #NESTED_QUEUE_STATIC_INIT
  * \post #NestedQueue_read_release() must be called after using the slot
