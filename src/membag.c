@@ -33,10 +33,10 @@ void *Membag_acquire(Membag *membag) {
 }
 
 
-void Membag_release(Membag *membag, const void *element) {
-    if (element == NULL) return;
+void Membag_release(Membag *membag, const void *slot) {
+    if (slot == NULL) return;
     const size_t idx =
-            ((char *)element - (char *)membag->data) / membag->elem_size;
+            ((char *)slot - (char *)membag->data) / membag->elem_size;
     /* Simple enough, though note that a "double release" will wreak havoc with
      * acquire as n_free is incremented without actually releasing a slot. This
      * may cause acquire() to be stuck in an infinite loop as it will search

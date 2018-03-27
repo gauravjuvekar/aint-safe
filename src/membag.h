@@ -85,7 +85,7 @@ typedef struct Membag {
  *     \c #MEMBAG_ALLOC_STATUS_LEN(\p p_n_elems)
  * \param p_data_array   data array to allocate from
  *
- * \return A #Membag instance with \c const members initialized
+ * \return A #Membag static initializer
  */
 #define MEMBAG_STATIC_INIT(                                   \
         p_elem_size, p_n_elems, p_status_array, p_data_array) \
@@ -108,8 +108,8 @@ void Membag_init(Membag *membag);
  *
  * \param membag #Membag to acquire the slot from
  *
- * \return Pointer to an available slot in \p membag
- * \retval NULL if no slot is available in \p membag
+ * \return Pointer to an available slot in \p membag->data
+ * \retval NULL if no slot is available in \p membag->data
  *
  * \pre \p membag must be initialized with #Membag_init
  */
@@ -118,15 +118,15 @@ void *Membag_acquire(Membag *membag);
 
 /** \brief Release an acquired slot
  *
- * \param membag  #Membag that the slot belongs to
- * \param element pointer to a slot previously acquired by #Membag_acquire or
+ * \param membag #Membag that the slot belongs to
+ * \param slot   pointer to a slot previously acquired by #Membag_acquire or
  *     \c NULL
  *
  *  \warning A "double release" / "double free" \b WILL wreak havoc with the
  *  entire data structure. Subsequent #Membag_acquire() calls may get stuck in
  *  infinite loops.
  */
-void Membag_release(Membag *membag, const void *element);
+void Membag_release(Membag *membag, const void *slot);
 
 
 #endif /* ifndef AINT_SAFE__MEMBAG_H */
