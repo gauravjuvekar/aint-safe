@@ -6,34 +6,41 @@
 /* Copyright 2018 Gaurav Juvekar */
 #include "nested_queue.h"
 
+static inline void *idx_to_ptr(const NestedQueue *q, unsigned int index) {
+    return (char *)q->data + (q->elem_size * index);
+}
 
-static void *NestedQueue_acquire(NestedQueue *  q,
-                                 void *_Atomic *acquire,
-                                 void *_Atomic *limit) {
-    void *src = atomic_load(acquire);
-    void *dst;
+static inline unsigned int ptr_to_idx(const NestedQueue *q, const void *ptr) {
+    return ((char *)ptr - (char *)q->data) / q->elem_size;
+}
+
+
+static void *NestedQueue_acquire(NestedQueue *         q,
+                                 _Atomic unsigned int *acquire,
+                                 _Atomic unsigned int *limit) {
+    unsigned int src = atomic_load(acquire);
+    unsigned int dst;
     do {
         if (src == atomic_load(limit)) {
             return NULL;
         } else {
-            dst = (char *)src + q->elem_size;
-            if (dst >= (void *)((char *)q->data + q->n_elems * q->elem_size)) {
-                dst = q->data;
-            }
+            dst = (src + 1) % q->n_elems;
         }
     } while (!atomic_compare_exchange_weak(acquire, &src, dst));
-    return src;
+    return idx_to_ptr(q, src);
 }
 
 
-static void NestedQueue_commit(void *_Atomic *commit,
-                               void *_Atomic *acquire,
-                               const void *   slot) {
+static void NestedQueue_commit(NestedQueue *         q,
+                               _Atomic unsigned int *commit,
+                               _Atomic unsigned int *acquire,
+                               const void *          slot_ptr) {
+    unsigned int slot = ptr_to_idx(q, slot_ptr);
     if (slot != atomic_load(commit)) {
         return;
     } else {
-        void *orig;
-        void *dest;
+        unsigned int orig;
+        unsigned int dest;
         do {
             dest = atomic_load(acquire);
             orig = atomic_exchange(commit, dest);
@@ -48,7 +55,7 @@ void *NestedQueue_write_acquire(NestedQueue *q) {
 
 
 void NestedQueue_write_commit(NestedQueue *q, const void *slot) {
-    NestedQueue_commit(&q->write_committed, &q->write_allocated, slot);
+    NestedQueue_commit(q, &q->write_committed, &q->write_allocated, slot);
 }
 
 
@@ -58,5 +65,5 @@ const void *NestedQueue_read_acquire(NestedQueue *q) {
 
 
 void NestedQueue_read_release(NestedQueue *q, const void *slot) {
-    NestedQueue_commit(&q->read_released, &q->read_acquired, slot);
+    NestedQueue_commit(q, &q->read_released, &q->read_acquired, slot);
 }

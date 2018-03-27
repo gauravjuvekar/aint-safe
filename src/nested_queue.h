@@ -16,8 +16,8 @@
 
 #if !defined(__DOXYGEN__AINT_SAFE__)
 _Static_assert(
-        ATOMIC_POINTER_LOCK_FREE,
-        "Your stdlib implementation does not have lock-free pointer atomics");
+        ATOMIC_INT_LOCK_FREE,
+        "Your stdlib implementation does not have lock-free int atomics");
 #endif
 
 
@@ -26,14 +26,14 @@ _Static_assert(
  * This must be initialized with #NESTED_QUEUE_STATIC_INIT at declaration
  */
 typedef struct NestedQueue {
-    /** Pointer to next slot in data that can be acquired for writing */
-    void *_Atomic write_allocated;
-    /** Pointer to first slot in data that is being written to */
-    void *_Atomic write_committed;
-    /** Pointer to next slot in data that can be acquired for reading */
-    void *_Atomic read_acquired;
-    /** Pointer to oldest slot in data that is being read */
-    void *_Atomic read_released;
+    /** Index of next slot in data that can be acquired for writing */
+    _Atomic unsigned int write_allocated;
+    /** Index of first slot in data that is being written to */
+    _Atomic unsigned int write_committed;
+    /** Index of next slot in data that can be acquired for reading */
+    _Atomic unsigned int read_acquired;
+    /** Index of oldest slot in data that is being read */
+    _Atomic unsigned int read_released;
     /** Data to allocate slots from */
     void *const data;
     /** Number of elements in #data */
@@ -56,8 +56,8 @@ typedef struct NestedQueue {
 #define NESTED_QUEUE_STATIC_INIT(p_elem_size, p_n_elems, p_data_array)        \
     {                                                                         \
         .data = p_data_array, .n_elems = p_n_elems, .elem_size = p_elem_size, \
-        .write_allocated = p_data_array, .write_committed = p_data_array,     \
-        .read_acquired = p_data_array, .read_released = p_data_array          \
+        .write_allocated = 0, .write_committed = 0, .read_acquired = 0,       \
+        .read_released = 0                                                    \
     }
 
 
