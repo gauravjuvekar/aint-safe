@@ -96,7 +96,7 @@ void NestedQueue_write_commit(NestedQueue *q, const void *slot);
  * \pre \p q must be initialized with #NESTED_QUEUE_STATIC_INIT
  * \post #NestedQueue_read_release() must be called after using the slot
  */
-void *NestedQueue_read_acquire(NestedQueue *q);
+const void *NestedQueue_read_acquire(NestedQueue *q);
 
 
 /** \brief Release a slot acquired for reading and release its memory

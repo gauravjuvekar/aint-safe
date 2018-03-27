@@ -52,7 +52,7 @@ void NestedQueue_write_commit(NestedQueue *q, const void *slot) {
 }
 
 
-void *NestedQueue_read_acquire(NestedQueue *q) {
+const void *NestedQueue_read_acquire(NestedQueue *q) {
     return NestedQueue_acquire(q, &q->read_acquired, &q->write_committed);
 }
 
