@@ -48,9 +48,9 @@ struct McasJournal {
         /* For Mcas_compare_exchange */
         struct {
             /** array of expected values */
-            const int *const expected;
+            const mcas_base_t *const expected;
             /** array of desired values */
-            const int *const desired;
+            const mcas_base_t *const desired;
             /** Internal flag to see if the data == expected for all values */
             /* We start swapping if data == expected, otherwise, data ==
              * expected is still being compared */
@@ -59,7 +59,7 @@ struct McasJournal {
         /* For Mcas_read */
         struct {
             /** Destination to store the values */
-            int *const read_dest;
+            mcas_base_t *const read_dest;
             atomic_flag *const read_flags;
         };
     };
@@ -111,7 +111,7 @@ static void complete_mcas(Mcas *mcas, McasJournal *journal) {
 static void complete_read(Mcas *mcas, McasJournal *journal) {
     if (atomic_load(&journal->status) == MCAS_STATUS_UNDEFINED) {
         for (size_t i = 0; i < mcas->n_elems; i++) {
-            int value = atomic_load(&mcas->data[i]);
+            mcas_base_t value = atomic_load(&mcas->data[i]);
             if (!atomic_flag_test_and_set(&journal->read_flags[i])) {
                 /* No need for this write to dest to be atomic as the flag acts
                  * like a once-only mutex */
@@ -148,8 +148,8 @@ static void execute_operation(Mcas *mcas, McasJournal *journal) {
 
 
 _Bool Mcas_compare_exchange(Mcas *     mcas,
-                            const int *expected,
-                            const int *desired) {
+                            const mcas_base_t *expected,
+                            const mcas_base_t *desired) {
     McasJournal journal = {
             .operation_chain = NULL,
             .operation       = MCAS_OPERATION_CAS,
@@ -168,8 +168,8 @@ _Bool Mcas_compare_exchange(Mcas *     mcas,
 }
 
 
-_Bool Mcas_read(Mcas *mcas, int *data) {
-    /* one flag after reading one int. The call that acquires this flag will
+_Bool Mcas_read(Mcas *mcas, mcas_base_t *data) {
+    /* one flag after reading one mcas_base_t. The call that acquires this flag will
      * write it to the destination. */
     atomic_flag read_flags[mcas->n_elems];
 

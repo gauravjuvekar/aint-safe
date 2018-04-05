@@ -10,13 +10,18 @@
 
 #ifndef AINT_SAFE__MCAS_H
 #define AINT_SAFE__MCAS_H 1
+
 #include <stdatomic.h>
+#include <stdint.h>
 #include <stddef.h>
+
+
+typedef intptr_t mcas_base_t;
 
 #if !defined(__DOXYGEN__AINT_SAFE__)
 _Static_assert(
-        ATOMIC_INT_LOCK_FREE,
-        "Your stdlib implementation does not have lock-free atomics for int");
+        atomic_is_lock_free((mcas_base_t *)NULL),
+        "Your stdlib implementation does not have lock-free atomics for the base unit");
 _Static_assert(
         ATOMIC_POINTER_LOCK_FREE,
         "Your stdlib implementation does not have lock-free pointer atomics");
@@ -32,7 +37,7 @@ typedef struct McasJournal McasJournal;
  */
 typedef struct {
     /** MCAS words */
-    _Atomic int *const data;
+    _Atomic mcas_base_t *const data;
     /** Number of elements in #data */
     const size_t n_elems;
     /** Internal "intent-log" journal to use while operating on the data */
@@ -45,7 +50,7 @@ typedef struct {
  * Use this macro to initialize a #Mcas at declaration.
  *
  * \param p_n_elems    number of elements in \p data
- * \param p_data_array data array of <tt>_Atomic  int</tt> to allocate from
+ * \param p_data_array data array of <tt>_Atomic  mcas_base_t</tt> to allocate from
  *
  * \return A #Mcas static initializer
  */
@@ -60,7 +65,7 @@ typedef struct {
  * \retval true  if the read is successful
  * \retval false if the read fails
  */
-_Bool Mcas_read(Mcas *mcas, int *data);
+_Bool Mcas_read(Mcas *mcas, mcas_base_t *data);
 
 
 /** \brief Atomicaly compare and swap values of the MCAS
@@ -69,8 +74,9 @@ _Bool Mcas_read(Mcas *mcas, int *data);
  * and if those are equal, replaces \p mcas->data with values from \p desired.
  *
  * \param mcas     to perform the CAS on
- * \param expected values before the CAS (array of \p mcas->n_elems ints)
- * \param desired  values after the CAS (array of \p mcas->n_elems ints)
+ * \param expected values before the CAS (array of \p mcas->n_elems
+ * mcas_base_t) \param desired  values after the CAS (array of \p mcas->n_elems
+ * mcas_base_t)
  *
  * \retval true  if the MCAS opearation succeeded
  * \retval false otherwise
@@ -78,8 +84,8 @@ _Bool Mcas_read(Mcas *mcas, int *data);
  * \note This function does \b NOT replace \p expected with the current values
  * if \p mcas->data and \p expected are not equal.
  */
-_Bool Mcas_compare_exchange(Mcas *     mcas,
-                            const int *expected,
-                            const int *desired);
+_Bool Mcas_compare_exchange(Mcas *             mcas,
+                            const mcas_base_t *expected,
+                            const mcas_base_t *desired);
 
 #endif /* ifndef AINT_SAFE__MCAS_H */
