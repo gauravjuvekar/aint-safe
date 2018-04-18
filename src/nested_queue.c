@@ -5,6 +5,7 @@
  */
 /* Copyright 2018 Gaurav Juvekar */
 #include "nested_queue.h"
+#include <string.h>
 
 static inline void *idx_to_ptr(const NestedQueue *q, unsigned int index) {
     return (char *)q->data + (q->elem_size * index);
@@ -15,55 +16,69 @@ static inline unsigned int ptr_to_idx(const NestedQueue *q, const void *ptr) {
 }
 
 
-static void *NestedQueue_acquire(NestedQueue *         q,
-                                 _Atomic unsigned int *acquire,
-                                 _Atomic unsigned int *limit) {
-    unsigned int src = atomic_load(acquire);
-    unsigned int dst;
+static void *
+NestedQueue_acquire(NestedQueue *q, int count_idx, int acquire_idx) {
+    mcas_base_t old_indexes[NESTED_QUEUE_NUMBER_OF_INDEXES];
+    mcas_base_t new_indexes[NESTED_QUEUE_NUMBER_OF_INDEXES];
     do {
-        if (src == atomic_load(limit)) {
-            return NULL;
-        } else {
-            dst = (src + 1) % q->n_elems;
-        }
-    } while (!atomic_compare_exchange_weak(acquire, &src, dst));
-    return idx_to_ptr(q, src);
+        Mcas_read(&q->indexes, old_indexes);
+        if (!old_indexes[count_idx]) { return NULL; }
+
+        memcpy(new_indexes, old_indexes, sizeof(new_indexes));
+        new_indexes[acquire_idx] = (new_indexes[acquire_idx] + 1) % q->n_elems;
+        new_indexes[count_idx] -= 1;
+    } while (!Mcas_compare_exchange(&q->indexes, old_indexes, new_indexes));
+
+    return idx_to_ptr(q, old_indexes[acquire_idx]);
 }
 
 
-static void NestedQueue_commit(NestedQueue *         q,
-                               _Atomic unsigned int *commit,
-                               _Atomic unsigned int *acquire,
-                               const void *          slot_ptr) {
-    unsigned int slot = ptr_to_idx(q, slot_ptr);
-    if (slot != atomic_load(commit)) {
-        return;
-    } else {
-        unsigned int orig;
-        unsigned int dest;
-        do {
-            dest = atomic_load(acquire);
-            orig = atomic_exchange(commit, dest);
-        } while (orig != dest);
-    }
+static void NestedQueue_commit(NestedQueue *q,
+                               int          commit_idx,
+                               int          acquire_idx,
+                               int          count_idx,
+                               const void * slot_ptr) {
+    mcas_base_t idx = ptr_to_idx(q, slot_ptr);
+    mcas_base_t old_indexes[NESTED_QUEUE_NUMBER_OF_INDEXES];
+    mcas_base_t new_indexes[NESTED_QUEUE_NUMBER_OF_INDEXES];
+    do {
+        Mcas_read(&q->indexes, old_indexes);
+        if (old_indexes[commit_idx] != idx) { return; }
+
+        memcpy(new_indexes, old_indexes, sizeof(new_indexes));
+        new_indexes[commit_idx] = old_indexes[acquire_idx];
+        new_indexes[count_idx] += (old_indexes[acquire_idx] + q->n_elems
+                                   - old_indexes[commit_idx])
+                                  % q->n_elems;
+    } while (!Mcas_compare_exchange(&q->indexes, old_indexes, new_indexes));
 }
 
 
 void *NestedQueue_write_acquire(NestedQueue *q) {
-    return NestedQueue_acquire(q, &q->write_allocated, &q->read_released);
+    return NestedQueue_acquire(
+            q, NESTED_QUEUE_COUNT_WRITABLE, NESTED_QUEUE_WRITE_ALLOCATED);
 }
 
 
 void NestedQueue_write_commit(NestedQueue *q, const void *slot) {
-    NestedQueue_commit(q, &q->write_committed, &q->write_allocated, slot);
+    NestedQueue_commit(q,
+                       NESTED_QUEUE_WRITE_COMMITTED,
+                       NESTED_QUEUE_WRITE_ALLOCATED,
+                       NESTED_QUEUE_COUNT_READABLE,
+                       slot);
 }
 
 
 const void *NestedQueue_read_acquire(NestedQueue *q) {
-    return NestedQueue_acquire(q, &q->read_acquired, &q->write_committed);
+    return NestedQueue_acquire(
+            q, NESTED_QUEUE_COUNT_READABLE, NESTED_QUEUE_READ_ACQUIRED);
 }
 
 
 void NestedQueue_read_release(NestedQueue *q, const void *slot) {
-    NestedQueue_commit(q, &q->read_released, &q->read_acquired, slot);
+    NestedQueue_commit(q,
+                       NESTED_QUEUE_READ_RELEASED,
+                       NESTED_QUEUE_READ_ACQUIRED,
+                       NESTED_QUEUE_COUNT_WRITABLE,
+                       slot);
 }
