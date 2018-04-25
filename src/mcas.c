@@ -169,8 +169,8 @@ _Bool Mcas_compare_exchange(Mcas *     mcas,
 
 
 _Bool Mcas_read(Mcas *mcas, mcas_base_t *data) {
-    /* one flag after reading one mcas_base_t. The call that acquires this flag will
-     * write it to the destination. */
+    /* one flag after reading one mcas_base_t. The call that acquires this flag
+     * will write it to the destination. */
     atomic_flag read_flags[mcas->n_elems];
 
     for (size_t i = 0; i < mcas->n_elems; i++) {
