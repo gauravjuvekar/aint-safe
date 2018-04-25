@@ -63,7 +63,7 @@ _Static_assert( ATOMIC_INT_LOCK_FREE,
  *
  * This must be initialized with #DOUBLE_BUFFER_STATIC_INIT at declaration.
  */
-typedef struct DoubleBuffer {
+typedef struct {
     /** Pointer to current slot in #data being read */
     void *_Atomic selected_read;
     /** Pointer to next slot in #data that can be read from */

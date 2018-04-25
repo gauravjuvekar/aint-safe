@@ -61,7 +61,7 @@ typedef atomic_flag membag_alloc_status_t;
  * This must be initialized with #MEMBAG_STATIC_INIT at declaration AND
  * #Membag_init at runtime.
  */
-typedef struct Membag {
+typedef struct {
     /** Status array marking allocated slots */
     membag_alloc_status_t *const alloc_status;
     /** Data to allocate slots from */
