@@ -41,6 +41,21 @@ typedef enum {
 } NestedQueueIndexes;
 
 
+typedef enum {
+    /** All acquires must be followed by the corresponding release after any
+     * other acquire-release pairs
+     */
+    NESTED_QUEUE_OPERATION_ORDER_NESTED,
+    /** Order of releases must be the same as order of acquires
+     * This is suitable when there is only one user
+     *
+     * \warning Do not use this in cases  of multiple producer/consumers unless
+     * you really know what you are doing.
+     */
+    NESTED_QUEUE_OPERATION_ORDER_FCFS,
+} NestedQueueOperationOrder;
+
+
 /** \brief Internal data structure of the nested MPMC queue
  *
  * This must be initialized with #NESTED_QUEUE_STATIC_INIT at declaration
@@ -54,6 +69,10 @@ typedef struct NestedQueue {
     const size_t n_elems;
     /** Size of a slot in #data */
     const size_t elem_size;
+    /** The ordering used for read operations */
+    const NestedQueueOperationOrder read_order;
+    /** The ordering used for write operations */
+    const NestedQueueOperationOrder write_order;
 } NestedQueue;
 
 
@@ -69,6 +88,10 @@ typedef struct NestedQueue {
  * \param p_elem_size    size of one element of \p data
  * \param p_n_elems      number of elements in \p data
  * \param p_data_array   data array to allocate from
+ * \param p_write_order  Ordering of acquire and release that will be used for
+ *                       writes
+ * \param p_read_order   Ordering of acquire and release that will be used for
+ *                       reads
  *
  * \return A #NestedQueue static initialiizer
  *
@@ -80,8 +103,12 @@ typedef struct NestedQueue {
  *
  * \endcode
  */
-#define NESTED_QUEUE_STATIC_INIT(                                             \
-        p_nested_queue, p_elem_size, p_n_elems, p_data_array)                 \
+#define NESTED_QUEUE_STATIC_INIT(p_nested_queue,                              \
+                                 p_elem_size,                                 \
+                                 p_n_elems,                                   \
+                                 p_data_array,                                \
+                                 p_write_order,                               \
+                                 p_read_order)                                \
     {                                                                         \
         .data = p_data_array, .n_elems = p_n_elems, .elem_size = p_elem_size, \
         .index_storage = {[NESTED_QUEUE_WRITE_ALLOCATED] = 0,                 \
@@ -91,7 +118,8 @@ typedef struct NestedQueue {
                           [NESTED_QUEUE_COUNT_READABLE]  = 0,                 \
                           [NESTED_QUEUE_COUNT_WRITABLE]  = p_n_elems},        \
         .indexes       = MCAS_STATIC_INIT(NESTED_QUEUE_NUMBER_OF_INDEXES,     \
-                                          &p_nested_queue.index_storage_)     \
+                                    &p_nested_queue.index_storage_),          \
+        .read_order = p_read_order, .write_order = p_write_order              \
     }
 
 
@@ -114,8 +142,7 @@ void *NestedQueue_write_acquire(NestedQueue *q);
  * \param q    #NestedQueue to from which \p slot was acquired
  * \param slot slot acquired by #NestedQueue_write_acquire()
  *
- * \pre #NestedQueue_write_commit() must be called for any intermediate slots
- * acquired after the corresponding #NestedQueue_write_acquire() call
+ * \note Calls must follow \p q->write_order
  */
 void NestedQueue_write_commit(NestedQueue *q, const void *slot);
 
@@ -138,8 +165,7 @@ const void *NestedQueue_read_acquire(NestedQueue *q);
  * \param q    #NestedQueue to from which \p slot was acquired
  * \param slot slot acquired by #NestedQueue_read_acquire()
  *
- * \pre #NestedQueue_read_release() must be called for any intermediate slots
- * acquired after the corresponding #NestedQueue_read_acquire() call
+ * \note Calls must follow \p q->read_order
  */
 void NestedQueue_read_release(NestedQueue *q, const void *slot);
 

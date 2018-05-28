@@ -6,6 +6,7 @@
 /* Copyright 2018 Gaurav Juvekar */
 #include "nested_queue.h"
 #include <string.h>
+#include <assert.h>
 
 static inline void *idx_to_ptr(const NestedQueue *q, unsigned int index) {
     return (char *)q->data + (q->elem_size * index);
@@ -37,20 +38,39 @@ static void NestedQueue_commit(NestedQueue *q,
                                int          commit_idx,
                                int          acquire_idx,
                                int          count_idx,
-                               const void * slot_ptr) {
+                               const void * slot_ptr,
+                               NestedQueueOperationOrder order) {
     mcas_base_t idx = ptr_to_idx(q, slot_ptr);
     mcas_base_t old_indexes[NESTED_QUEUE_NUMBER_OF_INDEXES];
     mcas_base_t new_indexes[NESTED_QUEUE_NUMBER_OF_INDEXES];
-    do {
-        Mcas_read(&q->indexes, old_indexes);
-        if (old_indexes[commit_idx] != idx) { return; }
 
-        memcpy(new_indexes, old_indexes, sizeof(new_indexes));
-        new_indexes[commit_idx] = old_indexes[acquire_idx];
-        new_indexes[count_idx] += (old_indexes[acquire_idx] + q->n_elems
-                                   - old_indexes[commit_idx])
-                                  % q->n_elems;
-    } while (!Mcas_compare_exchange(&q->indexes, old_indexes, new_indexes));
+    switch (order) {
+    case NESTED_QUEUE_OPERATION_ORDER_NESTED:
+        do {
+            Mcas_read(&q->indexes, old_indexes);
+            if (old_indexes[commit_idx] != idx) { return; }
+
+            memcpy(new_indexes, old_indexes, sizeof(new_indexes));
+            new_indexes[commit_idx] = old_indexes[acquire_idx];
+            new_indexes[count_idx] += (old_indexes[acquire_idx] + q->n_elems
+                                       - new_indexes[commit_idx])
+                                      % q->n_elems;
+        } while (
+                !Mcas_compare_exchange(&q->indexes, old_indexes, new_indexes));
+        break;
+
+    case NESTED_QUEUE_OPERATION_ORDER_FCFS:
+        do {
+            Mcas_read(&q->indexes, old_indexes);
+            assert(old_indexes[commit_idx] == idx);
+
+            memcpy(new_indexes, old_indexes, sizeof(new_indexes));
+            new_indexes[commit_idx] += 1;
+            new_indexes[commit_idx] %= q->n_elems;
+            new_indexes[count_idx] += 1;
+        } while (
+                !Mcas_compare_exchange(&q->indexes, old_indexes, new_indexes));
+    }
 }
 
 
@@ -65,7 +85,8 @@ void NestedQueue_write_commit(NestedQueue *q, const void *slot) {
                        NESTED_QUEUE_WRITE_COMMITTED,
                        NESTED_QUEUE_WRITE_ALLOCATED,
                        NESTED_QUEUE_COUNT_READABLE,
-                       slot);
+                       slot,
+                       q->write_order);
 }
 
 
@@ -80,5 +101,6 @@ void NestedQueue_read_release(NestedQueue *q, const void *slot) {
                        NESTED_QUEUE_READ_RELEASED,
                        NESTED_QUEUE_READ_ACQUIRED,
                        NESTED_QUEUE_COUNT_WRITABLE,
-                       slot);
+                       slot,
+                       q->read_order);
 }
