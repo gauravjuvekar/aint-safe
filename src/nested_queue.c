@@ -104,3 +104,38 @@ void NestedQueue_read_release(NestedQueue *q, const void *slot) {
                        slot,
                        q->read_order);
 }
+
+
+NestedQueueIterator NestedQueueIterator_init_read(NestedQueue *q) {
+    mcas_base_t indexes[NESTED_QUEUE_NUMBER_OF_INDEXES];
+    Mcas_read(&q->indexes, indexes);
+    return (NestedQueueIterator){
+            .queue     = q,
+            .current_i = indexes[NESTED_QUEUE_READ_RELEASED],
+            .end_i     = indexes[NESTED_QUEUE_READ_ACQUIRED],
+    };
+}
+
+
+NestedQueueIterator NestedQueueIterator_init_write(NestedQueue *q) {
+    mcas_base_t indexes[NESTED_QUEUE_NUMBER_OF_INDEXES];
+    Mcas_read(&q->indexes, indexes);
+    return (NestedQueueIterator){
+            .queue     = q,
+            .current_i = indexes[NESTED_QUEUE_WRITE_COMMITTED],
+            .end_i     = indexes[NESTED_QUEUE_WRITE_ALLOCATED],
+    };
+}
+
+
+void *NestedQueueIterator_next(NestedQueueIterator *iterator) {
+    if (iterator->current_i != iterator->end_i) {
+        void *ret = idx_to_ptr(iterator->queue, iterator->current_i);
+        iterator->current_i += 1;
+        iterator->current_i %= iterator->queue->n_elems;
+        return ret;
+    }
+    else {
+        return NULL;
+    }
+}

@@ -170,4 +170,51 @@ const void *NestedQueue_read_acquire(NestedQueue *q);
 void NestedQueue_read_release(NestedQueue *q, const void *slot);
 
 
+/** \brief Iterate over acquired (read/write) regions
+ *
+ * Must be initialized with #NestedQueueIterator_init_read or
+ * #NestedQueueIterator_init_write.
+ * \note This iterator iterates over the \b entire acquired region (at the time
+ * of initialization), irrespective of who acquired it. It is your
+ * responsibility to ensure mutual exclusion if iterating over a region that
+ * may be partly acquried by another user.
+ */
+typedef struct {
+    NestedQueue *const queue;
+    int current_i;
+    const int end_i;
+} NestedQueueIterator;
+
+
+/** Initialize a #NestedQueueIterator for iterating the read acquired region
+ *
+ * \param q the queue
+ * \return A #NestedQueueIterator over the read acquired region of \p q
+ *
+ * \note You must ensure that this region is exclusively acquired and not
+ * released while the iterator is used.
+ */
+NestedQueueIterator NestedQueueIterator_init_read(NestedQueue *q);
+
+
+/** Initialize a #NestedQueueIterator for iterating the write acquired region
+ *
+ * \param q the queue
+ * \return A #NestedQueueIterator over the write acquired region of \p q
+ *
+ * \note You must ensure that this region is exclusively acquired and not
+ * committed while the iterator is used.
+ */
+NestedQueueIterator NestedQueueIterator_init_write(NestedQueue *q);
+
+
+/** Return a pointer to the next slot in the iterator
+ *
+ * \param iterator the #NestedQueueIterator
+ * \return a pointer to the next slot that is iterated over
+ * \retval NULL if the end of the iterator is reached
+ */
+void *NestedQueueIterator_next(NestedQueueIterator *iterator);
+
+
 #endif /* ifndef AINT_SAFE__NESTED_QUEUE_H */
