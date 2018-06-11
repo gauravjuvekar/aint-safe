@@ -88,9 +88,9 @@ typedef struct NestedQueue {
  * \param p_elem_size    size of one element of \p data
  * \param p_n_elems      number of elements in \p data
  * \param p_data_array   data array to allocate from
- * \param p_write_order  Ordering of acquire and release that will be used for
+ * \param p_write_order  ordering of acquire and release that will be used for
  *                       writes
- * \param p_read_order   Ordering of acquire and release that will be used for
+ * \param p_read_order   ordering of acquire and release that will be used for
  *                       reads
  *
  * \return A #NestedQueue static initialiizer
