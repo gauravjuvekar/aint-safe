@@ -23,6 +23,7 @@ _Static_assert(
 #endif
 
 
+/** Indices of internal variables used */
 typedef enum {
     /** Index in indexes of next slot in data that can be acquired for writing */
     NESTED_QUEUE_WRITE_ALLOCATED,
@@ -41,13 +42,48 @@ typedef enum {
 } NestedQueueIndexes;
 
 
+/** The mode to use for read/write operations of the queue */
 typedef enum {
-    /** All acquires must be followed by the corresponding release after any
+    /** All acquires must be followed by the corresponding release \b after any
      * other acquire-release pairs
+     *
+     * \startuml
+     * [--> A: call
+     * activate A
+     * A -> A: acquire() == 0x1004
+     * A -> A: acquire() == 0x1008
+     * A --> B:  Interrupted
+     * activate B
+     * B -> B: acquire() => 0x100c
+     * B -> B: release(0x100c)
+     * B --> A: return from interrupt
+     * deactivate B
+     * A -> A: acquire() == 0x1010
+     * A -> A: release(0x1010)
+     * A -> A: release(0x1008)
+     * A -> A: release(0x1004)
+     * [<--A : return
+     * deactivate A
+     * \enduml
      */
     NESTED_QUEUE_OPERATION_ORDER_NESTED,
     /** Order of releases must be the same as order of acquires
      * This is suitable when there is only one user
+     *
+     * \startuml
+     * [--> A: call
+     * activate A
+     * A -> A: acquire() == 0x1004
+     * A -> A: acquire() == 0x1008
+     * A -> A: acquire() == 0x100c
+     * A -> A: acquire() == 0x1010
+     * A -> A: release(0x1004)
+     * A -> A: release(0x1008)
+     * A -> A: release(0x100c)
+     * A -> A: release(0x1010)
+     * [<--A : return
+     * deactivate A
+     * \enduml
      *
      * \warning Do not use this in cases  of multiple producer/consumers unless
      * you really know what you are doing.
@@ -78,11 +114,6 @@ typedef struct NestedQueue {
 
 /** \brief Statically initialize a #NestedQueue
  *
- * Use this macro to initialize a #NestedQueue at definition.
- *
- * \note You need to \e tentatively \e define (search what a C tentative
- * definition is) the #NestedQueue first.
- *
  * \param p_nested_queue the \e tentatively \e defined #NestedQueue to
  *                       initialize
  * \param p_elem_size    size of one element of \p data
@@ -94,6 +125,11 @@ typedef struct NestedQueue {
  *                       reads
  *
  * \return A #NestedQueue static initialiizer
+ *
+ * Use this macro to initialize a #NestedQueue at definition.
+ *
+ * \note You need to \e tentatively \e define (search what a C tentative
+ * definition is) the #NestedQueue first.
  *
  * \code{.c}
  * static int mydata[10];
@@ -180,8 +216,11 @@ void NestedQueue_read_release(NestedQueue *q, const void *slot);
  * may be partly acquried by another user.
  */
 typedef struct {
+    /** The queue being iterated over */
     NestedQueue *const queue;
+    /** The current index pointed to by the iterator */
     int current_i;
+    /** The last index of the iterator */
     const int end_i;
 } NestedQueueIterator;
 
