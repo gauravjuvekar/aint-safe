@@ -1,6 +1,6 @@
-/** \file membag.c
+/** \file mcas.c
  *
- * Memory bag implementation with static storage
+ * Interrupt-safe Multiword Compare-And-Swap implementation
  */
 /* Copyright 2018 Gaurav Juvekar */
 
