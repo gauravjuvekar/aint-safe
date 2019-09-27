@@ -1,6 +1,9 @@
-*Interrupt
-        - safe singly linkedl list * /
-/* Copyright 2018 Gaurav Juvekar */
+/** \file slist.c
+ *
+ * Interrupt-safe singly linked list
+ *
+ */
+/* Copyright 2019 Gaurav Juvekar */
 
 #include "slist.h"
 #include <assert.h>
