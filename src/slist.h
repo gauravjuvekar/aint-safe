@@ -6,7 +6,7 @@
  * \code{.c}
  * \endcode
  */
-/* Copyright 2018 Gaurav Juvekar */
+/* Copyright 2019 Gaurav Juvekar */
 
 #ifndef AINT_SAFE__SLIST_H
 #define AINT_SAFE__SLIST_H 1
@@ -14,6 +14,7 @@
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 
 #if !defined(__DOXYGEN__AINT_SAFE__)
@@ -25,7 +26,7 @@ _Static_assert(
 struct SlistNode {
     _Atomic bool deleting;
     struct SlistNode * _Atomic next;
-}
+};
 typedef struct SlistNode SlistNode;
 typedef SlistNode * _Atomic Slist;
 

@@ -63,21 +63,21 @@ SlistNode *Slist_delete_after(SlistNode *node, SlistNode *to_delete) {
     SlistNode *prev = node;
     while (prev != NULL && prev != to_delete) {
         if (atomic_load(&prev->next) == to_delete) {
-            SlistNode *next_of_to_delete = atomic_load(to_delete->next);
+            SlistNode *next_of_to_delete = atomic_load(&to_delete->next);
             if (!atomic_compare_exchange_strong(
-                        &prev->next, to_delete, next_of_to_delete)) {
+                        &prev->next, &to_delete, next_of_to_delete)) {
                 continue; /* Someone inserted something in between prev and
                              to_delete */
             }
             if (!atomic_compare_exchange_strong(
-                        &to_delete->next, next_of_to_delete, NULL)) {
+                        &to_delete->next, &next_of_to_delete, NULL)) {
                 /* Someone appended to the 'deleting' node.
                  * This should never happen. ('deleting' is a lock for the
                  * current node) */
                 assert(false);
             }
             atomic_store(&to_delete->deleting, false);
-            return ;
+            return to_delete;
         }
         prev = Slist_next_stable_until(prev, to_delete);
     }
