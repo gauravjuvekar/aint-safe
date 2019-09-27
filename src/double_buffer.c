@@ -3,7 +3,7 @@
  * Nested multiple-producer multiple-consumer double buffer to store the most
  * recent value with static storage.
  */
-/* Copyright 2018 Gaurav Juvekar */
+/* Copyright 2019 Gaurav Juvekar */
 #include "double_buffer.h"
 
 
@@ -16,7 +16,7 @@ void *DoubleBuffer_write_acquire(DoubleBuffer *db) {
         /* Write the current slot being read into the next slot to read, so
          * that that no reader will touch the remainig slot.
          * This must be done in a loop since a reader can change the current
-         * slot begin read between the atomic_load and the atomic_exchange.
+         * slot being read between the atomic_load and the atomic_exchange.
          * This is *NOT* async-safe, but only async-interrupt-safe */
         void *last_selected;
         do {
